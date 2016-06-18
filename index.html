@@ -2,12 +2,33 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title>Gidiot</title>
+    <script>
+      var nodegit = require('nodegit');
+      var promise = require('nodegit-promise');
+      var commitAll = require('./helpers/commitAll.js');
+      var path = require('path').resolve("."); //TODO: manage all git repo paths
+
+      commitAll(path);
+
+      function download() {
+      }
+
+      function upload() {
+      }
+    </script>
   </head>
   <body>
-    <h1>Hello World!</h1>
-    We are using node <script>document.write(process.versions.node)</script>,
-    Chrome <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
+    <center>
+      <h1>Project Name</h1>
+      <!-- All of the Node.js APIs are available in this renderer process. -->
+      <button onclick='download()'>Download</button>
+      <button onclick='upload()'>Upload</button>
+    </center>
   </body>
+
+  <script>
+    // You can also require other files to run in this process
+    //require('./renderer.js');
+  </script>
 </html>
