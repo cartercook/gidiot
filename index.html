@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <title>Gidiot</title>
     <script>
-      var nodegit = require('nodegit');
-      var promise = require('nodegit-promise');
-      var commitAll = require('./helpers/commitAll.js');
+      var git = require('nodegit-kit');
       var path = require('path').resolve("."); //TODO: manage all git repo paths
 
-      commitAll(path);
+      git.open(path).then(function(repo) {
+        //git commit -am "message"
+        return git.commit(repo, {'message':'gidiot autocommit'});
+      }).catch(function(error) {
+          console.error(error);
+      });
 
       function download() {
       }

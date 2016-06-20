@@ -22,7 +22,49 @@ module.exports = function(path) {
 		console.log('commit successful');
 	});
 	*/
+
 	
+	var treeOid;
+	var index;
+
+	nodegit.Repository.open(path).then(function(repoResult) {
+		repo = repoResult;
+		console.log('opened repo:');
+		console.log(repo);
+		return repo.refreshIndex();
+	}).then(function(indexResult) {
+		index = indexResult;
+		console.log('opened index:');
+		console.log(index);
+		return index.addAll();
+	}).then(function() {
+		console.log('added all');
+		index.write();
+		return index.writeTree();
+	}).then(function(treeOidResult) {
+		console.log('wrote tree:');
+		console.log(treeOid);
+		treeOid = treeOidResult;
+		return repo.getHeadCommit();
+	}).then(function(parent) {
+		console.log('got head commit:');
+		console.log(parent);
+		var sig = repo.defaultSignature();
+		return repo.createCommit(
+			'HEAD',
+			sig,
+			sig,
+			'gidiot autocommit',
+			treeOid,
+			[parent]
+		);
+	}).then(function(commitOid) {
+		console.log('commit successful');
+		console.log(commitOid);
+	});
+	
+	
+	/*
 	//https://gitter.im/nodegit/nodegit/archives/2015/03/18
 	var treeOid;
 	var index;
@@ -65,5 +107,5 @@ module.exports = function(path) {
 	}).then(function() {
 		console('commit successful');
 	});
-	
+	*/
 }
