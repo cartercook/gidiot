@@ -22,8 +22,10 @@
       // 2. Attempt a fast-forward merge
       // 3. If it succeeds, finish
       // 3. If it fails, commit and merge
-      // 4. write the conflicts to an index, Like: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
-      // 5. get a list of conflicted files and go to merge UI (do not write >>>===<<< to file)
+      // 4. write the conflicts to an index, like: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
+      // 5. use gitFakeFs to display the contents of all conflicted files in merge UI,
+      // filtering by file.isConflict, like: https://gist.github.com/elgubenis/419033b2d0c1b930f6b1
+      // (this way it doesn't write >>>===<<< to the actual file)
       // 6. Once all conflicts resolved, attach the merged commit to the tree
       function download() {
         var repo; //declare this here so it exists outside the promise chain
@@ -36,6 +38,7 @@
         }).then(function() {
           console.log('pull successful?')
           //TODO: check some criteria that it has either fast-forwarded or failed
+          // an error will be caught if it fails. Do it there.
         }).then(function() {
           console.log('attempting commit -am');
           
