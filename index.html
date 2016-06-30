@@ -4,20 +4,60 @@
     <meta charset="UTF-8">
     <title>Gidiot</title>
     <script>
-      var git = require('nodegit-kit');
-      var path = require('path').resolve("."); //TODO: manage all git repo paths
+      //TODO:
+      //implement the upload & download buttons
+      //manage all git repo paths
+      //email callstack and objects to myself on failure
+      //profiles for unity, twine, etc. that ignore specified file lines on merge
+      //----------modules----------//
+      var gitkit = require('nodegit-kit');
+      var pull = require('./helpers/pull.js');
+      
+      //----------functions----------//
+      var path = require('path').resolve("../test");
+      
 
-      git.open(path).then(function(repo) {
-        //git commit -am "message"
-        return git.commit(repo, {'message':'gidiot autocommit'});
-      }).catch(function(error) {
-          console.error(error);
-      });
-
+      //WHAT THIS SHOULD DO
+      // 1. fetch
+      // 2. Attempt a fast-forward merge
+      // 3. If it succeeds, finish
+      // 3. If it fails, commit and merge
+      // 4. write the conflicts to an index, Like: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
+      // 5. get a list of conflicted files and go to merge UI (do not write >>>===<<< to file)
+      // 6. Once all conflicts resolved, attach the merged commit to the tree
       function download() {
+        var repo; //declare this here so it exists outside the promise chain
+
+        console.log('opening repo');
+        gitkit.open(path).then(function(repoResult) {
+          console.log('open successful');
+          repo = repoResult;
+          return pull(repo);
+        }).then(function() {
+          console.log('pull successful?')
+          //TODO: check some criteria that it has either fast-forwarded or failed
+        }).then(function() {
+          console.log('attempting commit -am');
+          
+          return gitkit.commit(repo, {'message':'gidiot autocommit'});
+        }).then(function() {
+          console.log('commit successful, attempting pull');
+          pull(repo);
+        }).catch(function(error) {
+          console.error(error);
+        });
       }
 
       function upload() {
+
+        gitkit.open(path).then(function(repo) {
+          //git commit -am "message"
+          return gitkit.commit(repo, {'message':'gidiot autocommit'});
+        }).then(function() {
+          
+        }).catch(function(error) {
+          console.error(error);
+        });
       }
     </script>
   </head>
