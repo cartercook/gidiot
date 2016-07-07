@@ -7,12 +7,13 @@
       //TODO:
       //implement the upload & download buttons
       //manage all git repo paths
+      //implement repo discovery: http://www.nodegit.org/api/repository/#discover
       //email callstack and objects to myself on failure
       //profiles for unity, twine, etc. that ignore specified file lines on merge
       //----------modules----------//
       var gitkit = require('nodegit-kit');
       var pull = require('./helpers/pull.js');
-      
+
       //----------functions----------//
       var path = require('path').resolve("../test");
       
@@ -21,10 +22,11 @@
       // 1. fetch
       // 2. Attempt a fast-forward merge
       // 3. If it succeeds, finish
-      // 3. If it fails, commit and merge
-      // 4. write the conflicts to an index, like: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
+      // 3. If it fails, create a new branch, add a commit to it, and pull from the remote
+      // 4. write the conflicts to an index, like so: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
+      // 5. 
       // 5. use gitFakeFs to display the contents of all conflicted files in merge UI,
-      // filtering by file.isConflict, like: https://gist.github.com/elgubenis/419033b2d0c1b930f6b1
+      // filtering by Status.STATUS.CONFLICT, like: https://gist.github.com/elgubenis/419033b2d0c1b930f6b1
       // (this way it doesn't write >>>===<<< to the actual file)
       // 6. Once all conflicts resolved, attach the merged commit to the tree
       function download() {
@@ -32,35 +34,32 @@
 
         console.log('opening repo');
         gitkit.open(path).then(function(repoResult) {
-          console.log('open successful');
           repo = repoResult;
-          return pull(repo);
-        }).then(function() {
-          console.log('pull successful?')
-          //TODO: check some criteria that it has either fast-forwarded or failed
-          // an error will be caught if it fails. Do it there.
-        }).then(function() {
-          console.log('attempting commit -am');
+          console.log('open successful. Attempting pull');
           
-          return gitkit.commit(repo, {'message':'gidiot autocommit'});
-        }).then(function() {
-          console.log('commit successful, attempting pull');
-          pull(repo);
-        }).catch(function(error) {
-          console.error(error);
+          return pull(repo).then(function() {
+            console.log('fast-forward successful');
+          }).catch(function() {
+          console.log('exception caught, attempting commit -am');
+          gitkit.commit(repo, {'message':'gidiot autocommit'}).then(function() {
+            console.log('commit successful, attempting to get head commit');
+            return repo.getHeadCommit();
+          }).then(function(head) {
+            console.log('successfully retrieved head commit. Attempting to create a new branch');
+            return repo.createBranch('gidiot-temp', head, true); //true = overwrite existing branch
+          }).then(function() {
+            console.log('successfully created branch. attempting pull');
+            return pullMerge(repo);
+          }).then(function() {
+            console.log('pull successful');
+          }).catch(function(error){
+            console.error(error);
+          });
+        });
         });
       }
 
       function upload() {
-
-        gitkit.open(path).then(function(repo) {
-          //git commit -am "message"
-          return gitkit.commit(repo, {'message':'gidiot autocommit'});
-        }).then(function() {
-          
-        }).catch(function(error) {
-          console.error(error);
-        });
       }
     </script>
   </head>
