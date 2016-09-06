@@ -10,13 +10,18 @@
       //implement repo discovery: http://www.nodegit.org/api/repository/#discover
       //email callstack and objects to myself on failure
       //profiles for unity, twine, etc. that ignore specified file lines on merge
+      //Get on this list: https://github.com/sindresorhus/awesome-electron
       //----------modules----------//
+      var assert = require('assert');
+      var Promise = require('nodegit-promise');
+      var nodegit = require('nodegit');
       var gitkit = require('nodegit-kit');
-      var pull = require('./helpers/pull.js');
+      var fetch = require('./helpers/fetch.js');
+      var getLocalAndRemote = require('./helpers/getLocalAndRemote.js');
+      var commitAll = require('./helpers/commitAll.js');
 
       //----------functions----------//
       var path = require('path').resolve("../test");
-      
 
       //WHAT THIS SHOULD DO
       // 1. fetch
@@ -24,40 +29,85 @@
       // 3. If it succeeds, finish
       // 3. If it fails, create a new branch, add a commit to it, and pull from the remote
       // 4. write the conflicts to an index, like so: https://github.com/nodegit/nodegit/blob/75e508bec29120e1c84511eac8d0411123fe5985/test/tests/checkout.js
-      // 5. 
+      // 5. write the tree and checkout the conflict
       // 5. use gitFakeFs to display the contents of all conflicted files in merge UI,
       // filtering by Status.STATUS.CONFLICT, like: https://gist.github.com/elgubenis/419033b2d0c1b930f6b1
       // (this way it doesn't write >>>===<<< to the actual file)
       // 6. Once all conflicts resolved, attach the merged commit to the tree
       function download() {
-        var repo; //declare this here so it exists outside the promise chain
+        //declare this here so it exists outside the promise chain
+        var repo;
+        var remote;
 
-        console.log('opening repo');
+        console.log('opening repo'); //opens or inits if no repo exists
         gitkit.open(path).then(function(repoResult) {
           repo = repoResult;
-          console.log('open successful. Attempting pull');
-          
-          return pull(repo).then(function() {
+          assert(repo);
+          console.log('open successful. Attempting fetch');  
+          return fetch(repo);
+        
+        }).then(function() {
+          console.log('fetch successful. Attempting to get local & remote heads');
+          return getLocalAndRemote(repo);
+        
+        }).then(function(branches) {
+          console.log('retrieved local and remote successfully. Attempting fast-forward merge');
+          remote = branches[1];
+          repo.mergeBranches(branches[0], remote).then(function() {
             console.log('fast-forward successful');
-          }).catch(function() {
-          console.log('exception caught, attempting commit -am');
-          gitkit.commit(repo, {'message':'gidiot autocommit'}).then(function() {
-            console.log('commit successful, attempting to get head commit');
-            return repo.getHeadCommit();
-          }).then(function(head) {
-            console.log('successfully retrieved head commit. Attempting to create a new branch');
-            return repo.createBranch('gidiot-temp', head, true); //true = overwrite existing branch
-          }).then(function() {
-            console.log('successfully created branch. attempting pull');
-            return pullMerge(repo);
-          }).then(function() {
-            console.log('pull successful');
-          }).catch(function(error){
-            console.error(error);
+          
+          }).catch(function(error) {
+            console.log('conflicts detected, attempting commit -am');
+            gitkit.commit(repo, {'message':'gidiot autocommit'}).then(function(local) {
+
+              console.log('Commit successful. Attempting to merge with conflicts');
+              return nodegit.Merge.commits(repo, local, remote);
+              
+            }).then(function(index) {
+              assert(index, "index is undefined");
+              console.log('merge successful. Attemping to checkout conflicted index');
+              nodegit.Checkout.index(repo, index);
+            
+            }).then(function() {
+              console.log('checkout successful');
+            
+            }).catch(function(error) {
+              console.error(error);
+            });
           });
+        }).catch(function(error) {
+          console.error(error);
         });
-        });
-      }
+            //chain ends here if no errors are caught
+
+        //   }).catch(function(index) {
+
+        //     //this shit does not work
+        //     if(!(index instanceof nodegit.Index)) {
+        //       console.error(index);
+        //       return;
+        //     }
+        //     //TODO: fix issue where non-merge errors get in here
+
+        //     //error is an index, we have merge conflicts
+        //     console.log('merge conflicts detected. Attempting commit -am');
+        //     gitkit.commit(repo, {'message':'gidiot autocommit'}).then(function(commit) {
+        //        console.log('commit successful. re-attempting pull');
+        //        return pull(repo);
+        //     }).then(function(head) {
+        //       console.log('successfully retrieved head commit. Attempting to create a new branch');
+        //       return repo.createBranch('gidiot-temp', head, true); //true = overwrite existing branch
+        //     }).then(function() {
+        //       console.log('successfully created branch. attempting pull');
+        //       return pullMerge(repo);
+        //     }).then(function() {
+        //       console.log('pull successful');
+        //     }).catch(function(error){
+        //       console.error(error);
+        //     });
+        //   }); //end catch
+        // }); //end open
+      } //end download
 
       function upload() {
       }
@@ -71,9 +121,4 @@
       <button onclick='upload()'>Upload</button>
     </center>
   </body>
-
-  <script>
-    // You can also require other files to run in this process
-    //require('./renderer.js');
-  </script>
 </html>
